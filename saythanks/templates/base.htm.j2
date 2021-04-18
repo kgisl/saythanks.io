@@ -15,16 +15,26 @@
      <!-- FONT
     –––––––––––––––––––––––––––––––––––––––––––––––––– -->
     <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Annie+Use+Your+Telescope" rel="stylesheet">
 
     <!-- CSS
     –––––––––––––––––––––––––––––––––––––––––––––––––– -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/normalize.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/skeleton.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/saythanks.css') }}">
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.modal.min.css') }}">
      <!-- Favicon
      –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-     <link rel="icon" type="image/png" href="images/favicon.png">
+     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/owly.ico') }}">
+     <link rel="mask-icon" href="{{ url_for('static', filename='images/owly.svg') }}" color="green">
+
+     <!-- jQuery!
+     –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+     <script src="{{ url_for('static', filename='js/jquery.autogrowtextarea.min.js') }}"></script>
+     <script src="{{ url_for('static', filename='js/jquery.simplyCountable.js') }}"></script>
+     <script src="{{ url_for('static', filename='js/jquery.modal.min.js') }}"></script>
+     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     {% block extra_head %}
     {% endblock %}
@@ -33,21 +43,21 @@
 <body>
 
 <div class="container">
-<h1><a href="/">&#9728;</a> The 'Say Thanks' Project</h1>
+<h1><a href="/"><img id="eve" src="{{ url_for('static', filename='images/owly.svg') }}" alt="Eve the Owl"></a> The <strong>‘</strong><a href="/">Say Thanks</a><strong>’</strong> Project<span class="green"><strong>.</strong></span></h1>
 <hr>
 
 <div class="content">{% block content %}{% endblock %}</div>
 
 <div id="footer">
       {% block footer %}
-      &copy; 2016. A <a href="https://kennethreitz.org/">Kenneth Reitz</a> Project.
+      &copy; 2018. A <a href="https://kennethreitz.org/">Kenneth Reitz</a> Project.
       {% endblock %}
     </div>
 
 </div>
 
 {# GitHub Ribbon #}
-<a href="https://github.com/kennethreitz/saythanks.io"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+<a href="https://github.com/BlitzKraft/saythanks.io"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
 
 
 {# Gaug.es #}

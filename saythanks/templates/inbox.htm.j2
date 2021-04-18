@@ -13,19 +13,32 @@
 
 {% block content %}
 
-<img class="avatar" style="border-radius: 50%;" src="{{user['picture']}}"/ width=100px;>
+<input type="hidden" id="username" value={{user['nickname']}}>
 
-<h2>Welcome, {{ inbox.email }}!</h2>
+<div id="badge-modal" style="display:none;">
+    <h4>The <strong>‘</strong><a>Say Thanks</a><strong>’</strong> badge<span class="green"><strong>.</strong></span></h4>
+    <select class="u-full-width" id="badge-format">
+        <option value="imageurl">Image URL</option>
+        <option value="markdown">Markdown</option>
+        <option value="rst">RST</option>
+    </select>
+    <textarea onclick="this.select()" class="u-full-width" id="badgeCode">https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg</textarea>
+</div>
+
+<img class="avatar" style="border-radius: 50%;" src="{{user['picture']}}"/ width=100px;>
+<h2>Welcome, {{ user['email'] }}!</h2>
 
 <p>
     You may now direct your users (in a README or documentation, for example)
     to <a href="{{ url_for('display_submit_note', inbox=user['nickname'])}}">this URL</a>, where they can submit a note of thankfulness:
 </p>
+<hr>
 
 <div class="sixteen columns">
 
   <div class="two columns" style="margin-top: 0.5em;">
-  <p><strong>Buttons & Links:</strong></p>
+
+  <p ><strong>Buttons & Links:</strong></p>
   </div>
 
   <div class="three columns">
@@ -37,8 +50,8 @@
   </div>
 
   <div class="three columns" style="margin-top: 0.5em;">
-  <a href="{{ url_for('display_submit_note', inbox=user['nickname'])}}">
-      <img src="https://img.shields.io/badge/SayThanks.io-%E2%98%BC-1EAEDB.svg" />
+  <a href="#badge-modal" rel="modal:open">
+      <img src="https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg" />
   </a>
   </div>
 
@@ -48,37 +61,72 @@
   </a>
   </div>
 
+
 </div>
 
 <hr>
 
 <hr>
-<h3>Notes of Thankfulness:</h3>
 
-<table class="u-full-width">
+<hr>
+<p style="text-align: center;">
+  <h3>Notes of Thankfulness:</h3>
+</p>
+
+
+<table class='u-full-width'>
   <thead>
     <tr>
-      <th>From</th>
+      <th>Share URL</th>
       <th>Message</th>
+      <th>From</th>
+      <th>Archive?</th>
     </tr>
   </thead>
   <tbody>
   {% for note in notes %}
     <tr>
-      <td>{{ note.byline }}</td>
-      <td><pre width=120>{{ note.body }}</pre></td>
+      <td width='50px'><pre class='note'><strong><a class="share" href="{{ url_for('share_note', uuid=note.uuid)}}">🔗</a></strong></pre></td>
+      <td><pre class='note' width=180>{{ note.body }}</pre></td>
+      <td width='300px'><pre class='note'><strong>— {{ note.byline }}</strong></pre></td>
+      <td width='50px'><pre class='note'><strong><a class="share" href="{{ url_for('archive_note', uuid=note.uuid)}}">♻</a></strong></pre></td>
     </tr>
   {% endfor %}
 
     <tr>
-      <td>Kenneth Reitz & Team</td>
-      <td><pre>Thanks for using SayThanks.io! :)</pre></td>
+      <td><pre class='note'></pre></td>
+      <td><pre class='note'>Thanks for using SayThanks.io! :)</pre></td>
+      <td><pre class='note'>Kenneth Reitz & Team</pre></td>
     </tr>
   </tbody>
 </table>
 
-<p><strong>Note:</strong> in the unlikely event that a message appears here
-that is <em>not</em> positive, archival features will be added in the future.</p>
+<h4>Manage your Inbox:</h4>
+
+<p>Below are some rudimentary account management tools, available, to you, today, for free!</p>
+<ul>
+  <li><a href="{{ url_for('archived_inbox') }}">Archived notes</a>.</li>
+  <li>Export your inbox!
+    <a href="{{ url_for('inbox_export', format='csv') }}">CSV</a>
+    .</li>
+  <li>
+    {% if is_email_enabled == True %}
+      To disable e-mail please click <a href="{{ url_for('disable_email') }}">here</a>.
+    {% elif  is_email_enabled != True %}
+      To enable e-mail please click <a href="{{ url_for('enable_email') }}">here</a>.
+    {%endif%}
+
+</li>
+
+<li>
+    {% if is_enabled == True %}
+      To disable your account please click <a href="{{ url_for('disable_inbox') }}">here</a>.
+    {% elif  is_enabled != True %}
+      To enable your account please click <a href="{{ url_for('enable_inbox') }}">here</a>.
+    {%endif%}
+</li>
+
+<p><strong>Note:</strong> this website is a work in progress, and these settings will be moved to a separate settings page in the near future. If you'd like to help, send a pull request! :)</p>
 
 
 {% endblock %}
