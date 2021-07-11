@@ -13,9 +13,20 @@
 
 {% block content %}
 
-<img class="avatar" style="border-radius: 50%;" src="{{user['picture']}}"/ width=100px;>
+<input type="hidden" id="username" value={{user['nickname']}}>
 
-<h2>Welcome, {{ inbox.email }}!</h2>
+<div id="badge-modal" style="display:none;">
+    <h4>The <strong>‘</strong><a>Say Thanks</a><strong>’</strong> badge<span class="green"><strong>.</strong></span></h4>
+    <select class="u-full-width" id="badge-format">
+        <option value="imageurl">Image URL</option>
+        <option value="markdown">Markdown</option>
+        <option value="rst">RST</option>
+    </select>
+    <textarea onclick="this.select()" class="u-full-width" id="badgeCode">https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg</textarea>
+</div>
+
+<img class="avatar" style="border-radius: 50%;" src="{{user['picture']}}"/ width=100px;>
+<h2>Welcome, {{ user['nickname'] }}!</h2>
 
 <p>
     You may now direct your users (in a README or documentation, for example)
@@ -39,8 +50,8 @@
   </div>
 
   <div class="three columns" style="margin-top: 0.5em;">
-  <a href="{{ url_for('display_submit_note', inbox=user['nickname'])}}">
-      <img src="https://img.shields.io/badge/SayThanks.io-%E2%98%BC-1EAEDB.svg" />
+  <a href="#badge-modal" rel="modal:open">
+      <img src="https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg" />
   </a>
   </div>
 
@@ -50,11 +61,10 @@
   </a>
   </div>
 
-<hr>
 
 </div>
 
-
+<hr>
 
 <hr>
 
@@ -96,6 +106,9 @@
 <p>Below are some rudimentary account management tools, available, to you, today, for free!</p>
 <ul>
   <li><a href="{{ url_for('archived_inbox') }}">Archived notes</a>.</li>
+  <li>Export your inbox!
+    <a href="{{ url_for('inbox_export', format='csv') }}">CSV</a>
+    .</li>
   <li>
     {% if is_email_enabled == True %}
       To disable e-mail please click <a href="{{ url_for('disable_email') }}">here</a>.

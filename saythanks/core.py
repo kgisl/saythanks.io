@@ -11,9 +11,10 @@ import json
 import requests
 
 from functools import wraps
-from uuid import uuid4
 from flask import Flask, request, session, render_template, url_for
-from flask import abort, redirect, Markup
+from flask import abort, redirect, Markup, make_response
+from flask_common import Common
+from names import get_full_name
 from raven.contrib.flask import Sentry
 
 from . import storage
@@ -24,6 +25,9 @@ from . import storage
 app = Flask(__name__)
 app.secret_key = os.environ.get('APP_SECRET', 'CHANGEME')
 app.debug = True
+
+# Flask-Common.
+common = Common(app)
 
 # Sentry for catching application errors in production.
 if 'SENTRY_DSN' in os.environ:
@@ -36,6 +40,7 @@ auth_id = os.environ['AUTH0_CLIENT_ID']
 auth_secret = os.environ['AUTH0_CLIENT_SECRET']
 auth_callback_url = os.environ['AUTH0_CALLBACK_URL']
 auth_domain = os.environ['AUTH0_DOMAIN']
+auth_jwt_v2 = os.environ['AUTH0_JWT_V2_TOKEN']
 
 
 def requires_auth(f):
@@ -55,9 +60,9 @@ def requires_auth(f):
 @app.route('/')
 def index():
     return render_template('index.htm.j2',
-        callback_url=auth_callback_url,
-        auth_id=auth_id,
-        auth_domain=auth_domain)
+                           callback_url=auth_callback_url,
+                           auth_id=auth_id,
+                           auth_domain=auth_domain)
 
 
 @app.route('/inbox')
@@ -68,7 +73,7 @@ def inbox():
     profile = session['profile']
 
     # Grab the inbox from the database.
-    inbox = storage.Inbox(profile['nickname'])
+    inbox = storage.Inbox(profile['email'])
 
     is_enabled = storage.Inbox.is_enabled(inbox.slug)
 
@@ -76,7 +81,25 @@ def inbox():
 
     # Send over the list of all given notes for the user.
     return render_template('inbox.htm.j2',
-    user=profile, notes=inbox.notes, inbox=inbox, is_enabled=is_enabled, is_email_enabled=is_email_enabled)
+                           user=profile, notes=inbox.notes, inbox=inbox, is_enabled=is_enabled, is_email_enabled=is_email_enabled)
+
+
+@app.route('/inbox/export/<format>')
+@requires_auth
+def inbox_export(format):
+
+    # Auth0 stored account information.
+    profile = session['profile']
+
+    # Grab the inbox from the database.
+    inbox = storage.Inbox(profile['email'])
+
+    # Send over the list of all given notes for the user.
+    response = make_response(inbox.export(format))
+    response.headers['Content-Disposition'] = 'attachment; filename=saythanks-inbox.csv'
+    response.headers['Content-type'] = 'text/csv'
+    return response
+
 
 @app.route('/inbox/archived')
 @requires_auth
@@ -86,7 +109,7 @@ def archived_inbox():
     profile = session['profile']
 
     # Grab the inbox from the database.
-    inbox = storage.Inbox(profile['nickname'])
+    inbox = storage.Inbox(profile['email'])
 
     is_enabled = storage.Inbox.is_enabled(inbox.slug)
 
@@ -94,21 +117,22 @@ def archived_inbox():
 
     # Send over the list of all given notes for the user.
     return render_template('inbox_archived.htm.j2',
-    user=profile, notes=inbox.archived_notes, inbox=inbox, is_enabled=is_enabled, is_email_enabled=is_email_enabled)
+                           user=profile, notes=inbox.archived_notes, inbox=inbox, is_enabled=is_enabled, is_email_enabled=is_email_enabled)
+
 
 @app.route('/thanks')
 def thanks():
     return render_template('thanks.htm.j2',
-        callback_url=auth_callback_url,
-        auth_id=auth_id,
-        auth_domain=auth_domain)
+                           callback_url=auth_callback_url,
+                           auth_id=auth_id,
+                           auth_domain=auth_domain)
 
 
 @app.route('/disable-email')
 @requires_auth
 def disable_email():
     # Auth0 stored account information.
-    slug = session['profile']['nickname']
+    slug = session['profile']['email']
     storage.Inbox.disable_email(slug)
     return redirect(url_for('inbox'))
 
@@ -117,7 +141,7 @@ def disable_email():
 @requires_auth
 def enable_email():
     # Auth0 stored account information.
-    slug = session['profile']['nickname']
+    slug = session['profile']['email']
     storage.Inbox.enable_email(slug)
     return redirect(url_for('inbox'))
 
@@ -126,7 +150,7 @@ def enable_email():
 @requires_auth
 def disable_inbox():
     # Auth0 stored account information.
-    slug = session['profile']['nickname']
+    slug = session['profile']['email']
     storage.Inbox.disable_account(slug)
     return redirect(url_for('inbox'))
 
@@ -135,7 +159,7 @@ def disable_inbox():
 @requires_auth
 def enable_inbox():
     # Auth0 stored account information.
-    slug = session['profile']['nickname']
+    slug = session['profile']['email']
     storage.Inbox.enable_account(slug)
     return redirect(url_for('inbox'))
 
@@ -146,7 +170,9 @@ def display_submit_note(inbox):
         abort(404)
     elif not storage.Inbox.is_enabled(inbox):
         abort(404)
-    return render_template('submit_note.htm.j2', user=inbox)
+
+    fake_name = get_full_name()
+    return render_template('submit_note.htm.j2', user=inbox, fake_name=fake_name)
 
 
 @app.route('/note/<uuid>', methods=['GET'])
@@ -179,33 +205,30 @@ def archive_note(uuid):
 
 @app.route('/to/<inbox>/submit', methods=['POST'])
 def submit_note(inbox):
-
+    print("inside app.route Submit_note")
     # Fetch the current inbox.
     inbox = storage.Inbox(inbox)
 
-    # Replace newlines with <br> tags.
     body = request.form['body']
-    body = '---NEWLINE---'.join(body.split('\n'))
 
     # Strip any HTML away.
     body = Markup(body).striptags()
     byline = Markup(request.form['byline']).striptags()
-
-    # Crazy hack to get br tags preserved.
-    body = '<br>'.join(body.split('---NEWLINE---'))
 
     # Assert that the body has length.
     if not body:
         # Pretend that it was successful.
         return redirect(url_for('thanks'))
 
-
     # Store the incoming note to the database.
     note = inbox.submit_note(body=body, byline=byline)
 
+    # print(inbox.slug, session['profile']['email'])
+    email_address = session['profile']['email']
     # Email the user the new note.
     if storage.Inbox.is_email_enabled(inbox.slug):
-        note.notify(inbox.email)
+        note.notify(email_address)
+        # note.notify(inbox.slug)
 
     return redirect(url_for('thanks'))
 
@@ -214,7 +237,8 @@ def submit_note(inbox):
 def callback_handling():
     code = request.args.get('code')
 
-    json_header = {'content-type': 'application/json'}
+    json_header = {'content-type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(auth_jwt_v2)}
 
     token_url = 'https://{0}/oauth/token'.format(auth_domain)
     token_payload = {
@@ -226,15 +250,31 @@ def callback_handling():
     }
 
     # Fetch User info from Auth0.
-    token_info = requests.post(token_url, data=json.dumps(token_payload), headers=json_header).json()
-    user_url = 'https://{0}/userinfo?access_token={1}'.format(auth_domain, token_info['access_token'])
+    token_info = requests.post(token_url, data=json.dumps(
+        token_payload), headers=json_header).json()
+    user_url = 'https://{0}/userinfo?access_token={1}'.format(
+        auth_domain, token_info['access_token'])
     user_info = requests.get(user_url).json()
+
+    user_info_url = 'https://{0}/api/v2/users/{1}'.format(
+        auth_domain, user_info['sub'])
+
+    user_detail_info = requests.get(user_info_url, headers=json_header).json()
+    # print(f"user_info:{user_info}, user_detail_info:{user_detail_info}")
+    print("user_url", user_url)
+    print("user_info_url", user_info_url)
+    print(f"user_info: {user_info}")
+    print(f"user_detail_info: {user_detail_info}")
 
     # Add the 'user_info' to Flask session.
     session['profile'] = user_info
 
-    nickname = user_info['nickname']
-    userid = user_info['user_id']
+    #nickname = user_info['email']
+    nickname = user_detail_info['nickname']
+    userid = user_info['sub']
+    picture = user_detail_info['picture']
+    session['profile']['nickname'] = nickname
+    session['profile']['picture'] = picture
 
     if not storage.Inbox.does_exist(nickname):
         # Using nickname by default, can be changed manually later if needed.
